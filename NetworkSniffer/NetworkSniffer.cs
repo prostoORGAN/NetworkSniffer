@@ -28,11 +28,9 @@ namespace NetworkSniffer
 
         private void NetworkSnifferForm_Load(object sender, EventArgs e)
         {
-            // Resolves a host name or IP address to an System.Net.IPHostEntry instance.
             IPHostEntry iPHostEntry = Dns.GetHostEntry(Dns.GetHostName());
             if (iPHostEntry.AddressList.Length > 0)
             {
-                // Getting a list of IP addresses that are associated with a host.
                 cbIpAddressList.DataSource = iPHostEntry.AddressList.Where(
                     ipa => ipa.AddressFamily == AddressFamily.InterNetwork).
                     Select(ip => ip.ToString()).ToList();
@@ -51,35 +49,24 @@ namespace NetworkSniffer
             {
                 if (!ContinueCapturing)
                 {
-                    // Start capturing the packets.
                     btnStartCapture.Text = "&Stop";
                     ContinueCapturing = true;
-                    // For sniffing the socket to capture the packet it has to be a raw
-                    // socket, with the address family being of type internetwork
-                    // and protocol being IP.
-                    MainSocket = new Socket(AddressFamily.InterNetwork,
-                                            SocketType.Raw, ProtocolType.IP);
-                    //Bind the socket to the selected IP address.
-                    MainSocket.Bind(new IPEndPoint(IPAddress.Parse
-                                    (cbIpAddressList.Text), 0));
-                    //Set the socket options.
-                    MainSocket.SetSocketOption(SocketOptionLevel.IP,
-                                               SocketOptionName.HeaderIncluded, true);
+                    MainSocket = new Socket(AddressFamily.InterNetwork, SocketType.Raw, ProtocolType.IP);
+                    MainSocket.Bind(new IPEndPoint(IPAddress.Parse(cbIpAddressList.Text), 0));
+
+                    MainSocket.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.HeaderIncluded, true);
                     byte[] byTrue = new byte[4] { 1, 0, 0, 0 };
                     // Capture outgoing packets.
                     byte[] byOut = new byte[4] { 1, 0, 0, 0 };
                     // Socket.IOControl is analogous to the WSAIoctl method of Winsock 2.
                     MainSocket.IOControl(IOControlCode.ReceiveAll, byTrue, byOut);
-                    // Start receiving the packets asynchronously.
-                    MainSocket.BeginReceive(ByteData, 0, ByteData.Length,
-                                            SocketFlags.None,
+                    MainSocket.BeginReceive(ByteData, 0, ByteData.Length, SocketFlags.None,
                                             new AsyncCallback(OnReceive), null);
                 }
                 else
                 {
                     btnStartCapture.Text = "&Start";
                     ContinueCapturing = false;
-                    // To stop capturing the packets close the socket.
                     if (MainSocket != null)
                     {
                         MainSocket.Dispose();
@@ -94,27 +81,16 @@ namespace NetworkSniffer
             }
         }
 
-        /// <summary>
-        /// This function is being called asynchronously to invoke 'ParseData' method
-        /// which analyzes the incoming bytes received.
-        /// </summary>
-        /// <param name="asyncResult">
-        /// Represents the status of an asynchronous operation.
-        /// </param>
         private void OnReceive(IAsyncResult asyncResult)
         {
             try
             {
                 int nReceived = MainSocket.EndReceive(asyncResult);
-                // Analyze the bytes received.
                 ParseData(ByteData, nReceived);
                 if (ContinueCapturing)
                 {
                     ByteData = new byte[4096];
-                    // Making another call to BeginReceive so that we continue to receive
-                    // the incoming packets.
-                    MainSocket.BeginReceive(ByteData, 0, ByteData.Length,
-                                            SocketFlags.None,
+                    MainSocket.BeginReceive(ByteData, 0, ByteData.Length, SocketFlags.None,
                                             new AsyncCallback(OnReceive), null);
                 }
             }
@@ -126,24 +102,13 @@ namespace NetworkSniffer
             }
         }
 
-        /// <summary>
-        /// This function parses the incoming packets and extracts the data based upon
-        /// the protocol being carried by the IP datagram.
-        /// </summary>
-        /// <param name="byteData">Incoming bytes</param>
-        /// <param name="nReceived">The number of bytes received</param>
         private void ParseData(byte[] byteData, int nReceived)
         {
             TreeNode rootNode = new TreeNode();
-            // Since all protocol packets are encapsulated in the IP datagram
-            // so we start by parsing the IP header and see what protocol data
-            // is being carried by it.
             IpHeader ipHeader = new IpHeader(byteData, nReceived);
             TreeNode ipNode = MakeIPTreeNode(ipHeader);
             rootNode.Nodes.Add(ipNode);
 
-            // Now according to the protocol being carried by the IP datagram we parse
-            // the data field of the datagram.
             switch (ipHeader.ProtocolType)
             {
                 case Protocol.TCP: TcpHeader tcpHeader = new TcpHeader(ipHeader.Data,
@@ -182,16 +147,9 @@ namespace NetworkSniffer
             AddTreeNode addTreeNode = new AddTreeNode(OnAddTreeNode);
             rootNode.Text = ipHeader.SourceAddress.ToString() + "-" +
             ipHeader.DestinationAddress.ToString();
-            // Thread safe adding of the nodes.
             treeView.Invoke(addTreeNode, new object[] { rootNode });
         }
 
-        /// <summary>
-        /// Helper function which returns the information contained in the IP header
-        /// as a tree node.
-        /// </summary>
-        /// <param name="ipHeader">Object containing all the IP header fields</param>
-        /// <returns>TreeNode object returning IP header details</returns>
         private TreeNode MakeIPTreeNode(IpHeader ipHeader)
         {
             TreeNode ipNode = new TreeNode();
@@ -223,12 +181,6 @@ namespace NetworkSniffer
             return ipNode;
         }
 
-        /// <summary>
-        /// Helper function which returns the information contained in the TCP
-        /// header as a tree node.
-        /// </summary>
-        /// <param name="tcpHeader">Object containing all the TCP header fields</param>
-        /// <returns>TreeNode object returning TCP header details</returns>
         private TreeNode MakeTCPTreeNode(TcpHeader tcpHeader)
         {
             TreeNode tcpNode = new TreeNode();
@@ -252,12 +204,6 @@ namespace NetworkSniffer
             return tcpNode;
         }
 
-        /// <summary>
-        /// Helper function which returns the information contained in the UDP
-        /// header as a tree node.
-        /// </summary>
-        /// <param name="udpHeader">Object containing all the UDP header fields</param>
-        /// <returns>TreeNode object returning UDP header details</returns>
         private TreeNode MakeUDPTreeNode(UdpHeader udpHeader)
         {
             TreeNode udpNode = new TreeNode();
@@ -269,13 +215,6 @@ namespace NetworkSniffer
             return udpNode;
         }
 
-        /// <summary>
-        /// Helper function which returns the information contained in the DNS
-        /// header as a tree node.
-        /// </summary>
-        /// <param name="byteData">Incoming bytes</param>
-        /// <param name="nLength">Number of bytes received</param>
-        /// <returns></returns>
         private TreeNode MakeDNSTreeNode(byte[] byteData, int nLength)
         {
             DnsHeader dnsHeader = new DnsHeader(byteData, nLength);
