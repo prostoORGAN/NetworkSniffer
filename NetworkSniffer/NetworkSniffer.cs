@@ -56,9 +56,7 @@ namespace NetworkSniffer
 
                     MainSocket.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.HeaderIncluded, true);
                     byte[] byTrue = new byte[4] { 1, 0, 0, 0 };
-                    // Capture outgoing packets.
                     byte[] byOut = new byte[4] { 1, 0, 0, 0 };
-                    // Socket.IOControl is analogous to the WSAIoctl method of Winsock 2.
                     MainSocket.IOControl(IOControlCode.ReceiveAll, byTrue, byOut);
                     MainSocket.BeginReceive(ByteData, 0, ByteData.Length, SocketFlags.None,
                                             new AsyncCallback(OnReceive), null);
@@ -90,8 +88,7 @@ namespace NetworkSniffer
                 if (ContinueCapturing)
                 {
                     ByteData = new byte[4096];
-                    MainSocket.BeginReceive(ByteData, 0, ByteData.Length, SocketFlags.None,
-                                            new AsyncCallback(OnReceive), null);
+                    MainSocket.BeginReceive(ByteData, 0, ByteData.Length, SocketFlags.None, new AsyncCallback(OnReceive), null);
                 }
             }
             catch (ObjectDisposedException) { }
@@ -111,12 +108,9 @@ namespace NetworkSniffer
 
             switch (ipHeader.ProtocolType)
             {
-                case Protocol.TCP: TcpHeader tcpHeader = new TcpHeader(ipHeader.Data,
-                                                           ipHeader.MessageLength);
+                case Protocol.TCP: TcpHeader tcpHeader = new TcpHeader(ipHeader.Data, ipHeader.MessageLength);
                     TreeNode tcpNode = MakeTCPTreeNode(tcpHeader);
                     rootNode.Nodes.Add(tcpNode);
-                    // If the port is equal to 53 then the underlying protocol is DNS.
-                    // Note: DNS can use either TCP or UDP hence checking is done twice.
                     if (tcpHeader.DestinationPort == "53" || 
                         tcpHeader.SourcePort == "53")
                     {
@@ -125,13 +119,9 @@ namespace NetworkSniffer
                         rootNode.Nodes.Add(dnsNode);
                     }
                     break;
-                case Protocol.UDP: UdpHeader udpHeader = new UdpHeader(ipHeader.Data,
-                                                           (int)ipHeader.MessageLength);
+                case Protocol.UDP: UdpHeader udpHeader = new UdpHeader(ipHeader.Data, (int)ipHeader.MessageLength);
                     TreeNode udpNode = MakeUDPTreeNode(udpHeader);
                     rootNode.Nodes.Add(udpNode);
-                    // If the port is equal to 53 then the underlying protocol is DNS.
-                    // Note: DNS can use either TCP or UDP, thats the reason
-                    // why the checking has been done twice.
                     if (udpHeader.DestinationPort == "53" || 
                         udpHeader.SourcePort == "53")
                     {
