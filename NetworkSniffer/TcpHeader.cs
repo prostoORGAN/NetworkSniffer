@@ -79,7 +79,7 @@ namespace NetworkSniffer
             }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.Message, "Network Sniffer" + (nReceived), 
+                MessageBox.Show(ex.Message, "Network Sniffer2" + (nReceived), 
                                 MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }

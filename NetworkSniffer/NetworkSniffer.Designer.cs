@@ -60,7 +60,7 @@
             // 
             // treeView
             // 
-            this.treeView.BackColor = System.Drawing.Color.DarkKhaki;
+            this.treeView.BackColor = System.Drawing.Color.White;
             this.treeView.Location = new System.Drawing.Point(12, 12);
             this.treeView.Name = "treeView";
             this.treeView.Size = new System.Drawing.Size(290, 179);
